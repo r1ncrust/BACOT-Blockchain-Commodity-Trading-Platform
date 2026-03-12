@@ -1,0 +1,90 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build outputs
+dist/
+frontend/build/
+frontend/dist/
+backend/dist/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Hardhat artifacts
+artifacts/
+cache/
+.typechain/
+
+# Frontend artifacts
+frontend/.env
+frontend/build/
+frontend/public/build/
+
+# Backend uploads
+backend/uploads/
+uploads/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# OS files
+Thumbs.db
+ehthumbs.db
+Icon?
+._*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage directory used by tools like istanbul
+coverage/
+lib-cov/
+
+# Temporary folders
+tmp/
+temp/
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release/
+
+# Legacy
+npm-shrinkwrap.json
+
+# Blockchain
+.env.secrets
+.env.local
+.env.*.local
+
+# Typechain
+typechain/
+typechain-types/
+
+# Hardhat
+hh-cache/
+
+# Solidity
+.solhint-cache
+coverage/
+
+# React
+frontend/.vscode/
+frontend/.history/
+
+# Backend
+backend/logs/
+backend/tmp/

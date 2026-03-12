@@ -1,0 +1,118 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wallet-connect {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.wallet-connect button {
+  margin-left: 10px;
+}
+
+nav {
+  background-color: #f0f0f0;
+  padding: 10px;
+}
+
+nav button {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  margin-right: 5px;
+}
+
+nav button.active {
+  background-color: #007bff;
+  color: white;
+}
+
+main {
+  padding: 20px;
+}
+
+.company-onboarding, .trade-management, .shipment-tracking {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.company-onboarding form, .trade-management form {
+  display: grid;
+  gap: 15px;
+}
+
+.company-onboarding div, .trade-management div {
+  display: flex;
+  flex-direction: column;
+}
+
+.company-onboarding label, .trade-management label {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.company-onboarding input, .company-onboarding select,
+.trade-management input, .trade-management select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.company-onboarding button, .trade-management button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.company-onboarding button:disabled, .trade-management button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.shipment-details {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.shipment-details ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.shipment-details li {
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.message {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+}
+
+.connect-wallet-prompt {
+  padding: 50px;
+  text-align: center;
+  color: #666;
+}
