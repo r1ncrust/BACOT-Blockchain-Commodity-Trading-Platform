@@ -41,11 +41,11 @@ const mockTokenABI = [
 
 // Contract addresses (replace with actual deployed addresses)
 const CONTRACT_ADDRESSES = {
-  COMPANY_REGISTRY: "0x766ed38cA52C27a6194A819E49DD6C671541767E", // Example address
-  TRADE_MANAGER: "0xe7b2288a31acc6C3162b28C9A3461569e8540b36",
-  SHIPMENT_TRACKER: "0xF1144d094bB393B78bd7099da6f0468f0E0f0bE2",
-  ESCROW_PAYMENTS: "0xeDd39B8749d7747f50D3Bc075901fE1453EcE07C",
-  MOCK_TOKEN: "0x46C689e454f751D065B356B512199690A57F37D3"
+  COMPANY_REGISTRY: "0x5FbDB2315678afecb367f032d93F642f64180aa3", // Example address
+  TRADE_MANAGER: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+  SHIPMENT_TRACKER: "0x9fE46736679d2D9a65F0992F19A3554254929C4e",
+  ESCROW_PAYMENTS: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+  MOCK_TOKEN: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9"
 };
 
 function App() {
@@ -59,55 +59,44 @@ function App() {
   const [activeTab, setActiveTab] = useState('company');
 
   useEffect(() => {
-    const initContracts = async () => {
-      if (provider && account) {
-        try {
-          // getSigner() is asynchronous in ethers v6
-          const signer = await provider.getSigner();
-
-          // Initialize contract instances
-          const companyReg = new ethers.Contract(
-            CONTRACT_ADDRESSES.COMPANY_REGISTRY,
-            companyRegistryABI,
-            signer
-          );
-
-          const tradeMgr = new ethers.Contract(
-            CONTRACT_ADDRESSES.TRADE_MANAGER,
-            tradeManagerABI,
-            signer
-          );
-
-          const shipmentTrack = new ethers.Contract(
-            CONTRACT_ADDRESSES.SHIPMENT_TRACKER,
-            shipmentTrackerABI,
-            signer
-          );
-
-          const escrowPay = new ethers.Contract(
-            CONTRACT_ADDRESSES.ESCROW_PAYMENTS,
-            escrowPaymentsABI,
-            signer
-          );
-
-          const mockTok = new ethers.Contract(
-            CONTRACT_ADDRESSES.MOCK_TOKEN,
-            mockTokenABI,
-            signer
-          );
-
-          setCompanyRegistry(companyReg);
-          setTradeManager(tradeMgr);
-          setShipmentTracker(shipmentTrack);
-          setEscrowPayments(escrowPay);
-          setMockToken(mockTok);
-        } catch (error) {
-          console.error("Failed to initialize contracts:", error);
-        }
-      }
-    };
-
-    initContracts();
+    if (provider && account) {
+      // Initialize contract instances
+      const companyReg = new ethers.Contract(
+        CONTRACT_ADDRESSES.COMPANY_REGISTRY,
+        companyRegistryABI,
+        provider.getSigner()
+      );
+      
+      const tradeMgr = new ethers.Contract(
+        CONTRACT_ADDRESSES.TRADE_MANAGER,
+        tradeManagerABI,
+        provider.getSigner()
+      );
+      
+      const shipmentTrack = new ethers.Contract(
+        CONTRACT_ADDRESSES.SHIPMENT_TRACKER,
+        shipmentTrackerABI,
+        provider.getSigner()
+      );
+      
+      const escrowPay = new ethers.Contract(
+        CONTRACT_ADDRESSES.ESCROW_PAYMENTS,
+        escrowPaymentsABI,
+        provider.getSigner()
+      );
+      
+      const mockTok = new ethers.Contract(
+        CONTRACT_ADDRESSES.MOCK_TOKEN,
+        mockTokenABI,
+        provider.getSigner()
+      );
+      
+      setCompanyRegistry(companyReg);
+      setTradeManager(tradeMgr);
+      setShipmentTracker(shipmentTrack);
+      setEscrowPayments(escrowPay);
+      setMockToken(mockTok);
+    }
   }, [provider, account]);
 
   const handleConnect = (acc: string, prov: any) => {
@@ -131,49 +120,49 @@ function App() {
         <h1>Commodity Trading Platform</h1>
         <WalletConnect onConnect={handleConnect} onDisconnect={handleDisconnect} />
       </header>
-
+      
       <nav>
-        <button
+        <button 
           className={activeTab === 'company' ? 'active' : ''}
           onClick={() => setActiveTab('company')}
         >
           Company Onboarding
         </button>
-        <button
+        <button 
           className={activeTab === 'trade' ? 'active' : ''}
           onClick={() => setActiveTab('trade')}
         >
           Trade Management
         </button>
-        <button
+        <button 
           className={activeTab === 'shipment' ? 'active' : ''}
           onClick={() => setActiveTab('shipment')}
         >
           Shipment Tracking
         </button>
       </nav>
-
+      
       <main>
         {account ? (
           <>
             {activeTab === 'company' && companyRegistry && (
-              <CompanyOnboarding
-                companyRegistry={companyRegistry}
-                account={account}
+              <CompanyOnboarding 
+                companyRegistry={companyRegistry} 
+                account={account} 
               />
             )}
-
+            
             {activeTab === 'trade' && tradeManager && escrowPayments && mockToken && (
-              <TradeManagement
+              <TradeManagement 
                 tradeManager={tradeManager}
                 escrowPayments={escrowPayments}
                 mockToken={mockToken}
                 account={account}
               />
             )}
-
+            
             {activeTab === 'shipment' && shipmentTracker && (
-              <ShipmentTracking
+              <ShipmentTracking 
                 shipmentTracker={shipmentTracker}
                 account={account}
               />

@@ -47,25 +47,20 @@ const TradeManagement: React.FC<TradeManagementProps> = ({
     setMessage('');
 
     try {
-      const expiryTimestamp = Math.floor(Date.now() / 1000) + (parseInt(newTrade.expiryDays || "0") * 86400);
-      const disputeWindowDuration = parseInt(newTrade.disputeWindowDays || "0") * 86400;
-
-      const qWei = ethers.parseUnits(newTrade.quantity || "0", 18);
-      const pWei = ethers.parseUnits(newTrade.pricePerUnit || "0", 18);
-      const depositPct = BigInt(newTrade.depositPercent || "0");
-
-      const totalValueWei = (qWei * pWei) / BigInt("1000000000000000000");
-      const depositAmount = (totalValueWei * depositPct) / BigInt(100);
+      const expiryTimestamp = Math.floor(Date.now() / 1000) + (parseInt(newTrade.expiryDays) * 86400);
+      const disputeWindowDuration = parseInt(newTrade.disputeWindowDays) * 86400;
+      const totalValue = BigInt(newTrade.quantity) * BigInt(newTrade.pricePerUnit);
+      const depositAmount = (totalValue * BigInt(newTrade.depositPercent)) / BigInt(100);
 
       const tx = await tradeManager.createTrade(
         newTrade.seller,
         newTrade.commodityType,
-        qWei,
+        ethers.parseUnits(newTrade.quantity, 18),
         newTrade.unit,
-        pWei,
+        ethers.parseUnits(newTrade.pricePerUnit, 18),
         newTrade.paymentToken,
         newTrade.incoterms,
-        parseInt(newTrade.shipmentId || "0"),
+        parseInt(newTrade.shipmentId),
         expiryTimestamp,
         disputeWindowDuration,
         depositAmount

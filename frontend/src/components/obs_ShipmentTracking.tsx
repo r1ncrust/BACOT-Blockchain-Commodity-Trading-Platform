@@ -32,28 +32,28 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
 
     try {
       const expectedDeliveryDate = Math.floor(new Date(newShipment.expectedDeliveryDate).getTime() / 1000);
-
+      
       const tx = await shipmentTracker.createShipment(
         newShipment.commodityType,
         ethers.parseUnits(newShipment.quantity, 18),
         newShipment.unit,
         newShipment.origin,
         newShipment.destination,
-        ethers.getAddress(newShipment.shipper),
+        newShipment.shipper,
         expectedDeliveryDate,
         newShipment.trackingId
       );
       const receipt = await tx.wait();
-
+      
       // Extract shipment ID from event
-      const event = receipt?.logs.find((log: any) =>
+      const event = receipt?.logs.find((log: any) => 
         log.fragment?.name === 'ShipmentCreated'
       );
       const newShipmentId = event.args.shipmentId;
-
+      
       setMessage(`Shipment created successfully! ID: ${newShipmentId}`);
       setShipmentId(newShipmentId);
-
+      
       setNewShipment({
         commodityType: '',
         quantity: '',
@@ -74,7 +74,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
 
   const fetchShipmentDetails = async () => {
     if (!shipmentId) return;
-
+    
     try {
       const shipmentData = await shipmentTracker.getShipment(shipmentId);
       setShipment({
@@ -84,7 +84,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
         expectedDeliveryDate: Number(shipmentData.expectedDeliveryDate),
         createdAt: Number(shipmentData.createdAt)
       });
-
+      
       // Fetch status updates
       const updates = await shipmentTracker.getStatusUpdates(shipmentId);
       setStatusUpdates(updates.map((u: any) => ({
@@ -92,7 +92,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
         status: Number(u.status),
         timestamp: Number(u.timestamp)
       })));
-
+      
       // Fetch checkpoints
       const cp = await shipmentTracker.getCheckpoints(shipmentId);
       setCheckpoints(cp.map((c: any) => ({
@@ -121,7 +121,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
           <input
             type="text"
             value={newShipment.commodityType}
-            onChange={(e) => setNewShipment({ ...newShipment, commodityType: e.target.value })}
+            onChange={(e) => setNewShipment({...newShipment, commodityType: e.target.value})}
             required
           />
         </div>
@@ -130,7 +130,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
           <input
             type="number"
             value={newShipment.quantity}
-            onChange={(e) => setNewShipment({ ...newShipment, quantity: e.target.value })}
+            onChange={(e) => setNewShipment({...newShipment, quantity: e.target.value})}
             required
           />
         </div>
@@ -138,7 +138,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
           <label>Unit:</label>
           <select
             value={newShipment.unit}
-            onChange={(e) => setNewShipment({ ...newShipment, unit: e.target.value })}
+            onChange={(e) => setNewShipment({...newShipment, unit: e.target.value})}
           >
             <option value="tons">Tons</option>
             <option value="kg">Kilograms</option>
@@ -150,7 +150,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
           <input
             type="text"
             value={newShipment.origin}
-            onChange={(e) => setNewShipment({ ...newShipment, origin: e.target.value })}
+            onChange={(e) => setNewShipment({...newShipment, origin: e.target.value})}
             required
           />
         </div>
@@ -159,16 +159,16 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
           <input
             type="text"
             value={newShipment.destination}
-            onChange={(e) => setNewShipment({ ...newShipment, destination: e.target.value })}
+            onChange={(e) => setNewShipment({...newShipment, destination: e.target.value})}
             required
           />
         </div>
         <div>
-          <label>Shipper Address:</label>
+          <label>Shipper:</label>
           <input
             type="text"
             value={newShipment.shipper}
-            onChange={(e) => setNewShipment({ ...newShipment, shipper: e.target.value })}
+            onChange={(e) => setNewShipment({...newShipment, shipper: e.target.value})}
             required
           />
         </div>
@@ -177,7 +177,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
           <input
             type="date"
             value={newShipment.expectedDeliveryDate}
-            onChange={(e) => setNewShipment({ ...newShipment, expectedDeliveryDate: e.target.value })}
+            onChange={(e) => setNewShipment({...newShipment, expectedDeliveryDate: e.target.value})}
             required
           />
         </div>
@@ -186,7 +186,7 @@ const ShipmentTracking: React.FC<ShipmentTrackingProps> = ({ shipmentTracker, ac
           <input
             type="text"
             value={newShipment.trackingId}
-            onChange={(e) => setNewShipment({ ...newShipment, trackingId: e.target.value })}
+            onChange={(e) => setNewShipment({...newShipment, trackingId: e.target.value})}
             required
           />
         </div>

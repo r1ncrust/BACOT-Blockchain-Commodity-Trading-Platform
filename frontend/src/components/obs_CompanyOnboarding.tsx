@@ -48,27 +48,6 @@ const CompanyOnboarding: React.FC<CompanyOnboardingProps> = ({ companyRegistry, 
     }
   };
 
-  const [approveAddress, setApproveAddress] = useState('');
-  const [approveLoading, setApproveLoading] = useState(false);
-
-  const handleApprove = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setApproveLoading(true);
-    setMessage('');
-
-    try {
-      const tx = await companyRegistry.approveCompany(ethers.getAddress(approveAddress));
-      await tx.wait();
-      setMessage('Company approved successfully!');
-      setApproveAddress('');
-    } catch (error: any) {
-      console.error('Error approving company:', error);
-      setMessage(`Error: ${error.message || 'Failed to approve company'}`);
-    } finally {
-      setApproveLoading(false);
-    }
-  };
-
   return (
     <div className="company-onboarding">
       <h2>Company Registration</h2>
@@ -129,25 +108,6 @@ const CompanyOnboarding: React.FC<CompanyOnboardingProps> = ({ companyRegistry, 
           {loading ? 'Registering...' : 'Register Company'}
         </button>
       </form>
-
-      <hr style={{ margin: '2rem 0' }} />
-
-      <h2>Admin: Approve Company</h2>
-      <form onSubmit={handleApprove}>
-        <div>
-          <label>Company Wallet Address:</label>
-          <input
-            type="text"
-            value={approveAddress}
-            onChange={(e) => setApproveAddress(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit" disabled={approveLoading}>
-          {approveLoading ? 'Approving...' : 'Approve Company'}
-        </button>
-      </form>
-
       {message && <p>{message}</p>}
     </div>
   );
