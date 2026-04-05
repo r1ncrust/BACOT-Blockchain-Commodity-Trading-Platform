@@ -5,6 +5,7 @@ import CompanyOnboarding from './components/CompanyOnboarding';
 import TradeManagement from './components/TradeManagement';
 import ShipmentTracking from './components/ShipmentTracking';
 import './App.css';
+import { CONTRACT_ADDRESSES } from './contract-addresses';
 
 // Import contract ABIs (these would normally be imported from generated files)
 const companyRegistryABI = [
@@ -17,6 +18,8 @@ const companyRegistryABI = [
 const tradeManagerABI = [
   "function createTrade(address _seller, string memory _commodityType, uint256 _quantity, string memory _unit, uint256 _pricePerUnit, address _paymentToken, string memory _incoterms, uint256 _shipmentId, uint256 _expiryTimestamp, uint256 _disputeWindowDuration, uint256 _depositAmount) external returns (uint256)",
   "function acceptTrade(uint256 _tradeId, bytes memory _signature) external",
+  "function lockTrade(uint256 _tradeId) external",
+  "function cancelTrade(uint256 _tradeId) external",
   "function getTrade(uint256 _tradeId) external view returns (tuple(uint256 id, address buyer, address seller, string commodityType, uint256 quantity, string unit, uint256 pricePerUnit, address paymentToken, string incoterms, uint256 shipmentId, uint256 expiryTimestamp, uint256 disputeWindowEnds, uint256 depositAmount, uint8 status, uint256 createdAt, bytes32 buyerSignatureHash, bytes32 sellerSignatureHash, bytes32 finalConfirmationHash) memory)",
   "function getNonce(address _address) external view returns (uint256)"
 ];
@@ -25,7 +28,8 @@ const shipmentTrackerABI = [
   "function createShipment(string memory _commodityType, uint256 _quantity, string memory _unit, string memory _origin, string memory _destination, address _shipper, uint256 _expectedDeliveryDate, string memory _trackingId) external returns (uint256)",
   "function getShipment(uint256 _shipmentId) external view returns (tuple(uint256 id, address creator, string commodityType, uint256 quantity, string unit, string origin, string destination, address shipper, uint256 expectedDeliveryDate, string trackingId, uint8 status, uint256 createdAt) memory)",
   "function getStatusUpdates(uint256 _shipmentId) external view returns (tuple(uint8 status, string details, uint256 timestamp, address updater)[] memory)",
-  "function getCheckpoints(uint256 _shipmentId) external view returns (tuple(string location, int256 temperature, int256 humidity, uint256 timestamp, bytes32 dataHash)[] memory)"
+  "function getCheckpoints(uint256 _shipmentId) external view returns (tuple(string location, int256 temperature, int256 humidity, uint256 timestamp, bytes32 dataHash)[] memory)",
+  "event ShipmentCreated(uint256 indexed shipmentId, address indexed creator)"
 ];
 
 const escrowPaymentsABI = [
@@ -39,14 +43,7 @@ const mockTokenABI = [
   "function balanceOf(address account) external view returns (uint256)"
 ];
 
-// Contract addresses (replace with actual deployed addresses)
-const CONTRACT_ADDRESSES = {
-  COMPANY_REGISTRY: "0x766ed38cA52C27a6194A819E49DD6C671541767E", // Example address
-  TRADE_MANAGER: "0xe7b2288a31acc6C3162b28C9A3461569e8540b36",
-  SHIPMENT_TRACKER: "0xF1144d094bB393B78bd7099da6f0468f0E0f0bE2",
-  ESCROW_PAYMENTS: "0xeDd39B8749d7747f50D3Bc075901fE1453EcE07C",
-  MOCK_TOKEN: "0x46C689e454f751D065B356B512199690A57F37D3"
-};
+// Contract addresses are dynamically imported from contract-addresses.ts
 
 function App() {
   const [account, setAccount] = useState<string | null>(null);
@@ -163,18 +160,21 @@ function App() {
               />
             )}
 
-            {activeTab === 'trade' && tradeManager && escrowPayments && mockToken && (
+            {activeTab === 'trade' && tradeManager && escrowPayments && mockToken && shipmentTracker && (
               <TradeManagement
                 tradeManager={tradeManager}
                 escrowPayments={escrowPayments}
                 mockToken={mockToken}
+                shipmentTracker={shipmentTracker}
                 account={account}
               />
             )}
 
-            {activeTab === 'shipment' && shipmentTracker && (
+            {activeTab === 'shipment' && shipmentTracker && tradeManager && escrowPayments && (
               <ShipmentTracking
                 shipmentTracker={shipmentTracker}
+                tradeManager={tradeManager}
+                escrowPayments={escrowPayments}
                 account={account}
               />
             )}
