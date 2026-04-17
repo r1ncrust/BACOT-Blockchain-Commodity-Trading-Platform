@@ -60,7 +60,7 @@ const TradeManagement: React.FC<TradeManagementProps> = ({
     try {
       if (!tradeManager || !account) return;
 
-      const userTrades = [];
+      const userTrades: any[] = [];
       let currentId = 1;
 
       // 1. Fetch all shipments to map which trades have shipments
@@ -106,7 +106,17 @@ const TradeManagement: React.FC<TradeManagementProps> = ({
           ) {
             console.log(`Trade ID ${currentId} belongs to user.`);
             userTrades.push({
-              ...trade,
+              id: currentId,
+              buyer: trade.buyer,
+              seller: trade.seller,
+              commodityType: trade.commodityType,
+              quantity: trade.quantity,
+              unit: trade.unit,
+              pricePerUnit: trade.pricePerUnit,
+              paymentToken: trade.paymentToken,
+              incoterms: trade.incoterms,
+              depositAmount: trade.depositAmount,
+              status: trade.status,
               hasShipment: tradeShipmentMap.has(currentId.toString())
             });
           } else {

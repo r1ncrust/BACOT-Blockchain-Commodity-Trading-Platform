@@ -1,0 +1,752 @@
+
+  TC-API-01 | REST API Security Test
+
+======================================================================
+TC-API-01 | REST API Security Test
+Target: test
+======================================================================
+
+[36mGROUP 1: Basic endpoint availability[0m
+
+[36mGROUP 2: Injection payload tests for Checkpoints API[0m
+
+[36mGROUP 3: Path Traversal / LFI on Documents API[0m
+
+[36mGROUP 4: HTTP method fuzzing[0m
+
+======================================================================
+SUMMARY | Passed: 0 | Failed: 0 | Warnings: 13
+======================================================================
+
+[32m✅ All reachable endpoints passed security checks[0m
+    ✔ Should pass all security checks against the backend API
+
+  TC-API-02 | Oracle Data Feed Manipulation & Document Integrity
+  ✅ Oracle data hash committed on-chain: 0xea42aefe5afc3c68c90ef9a03cbc84e0f8828577780b39a8a6e23f67f477716d
+  ✅ Stored hash matches original oracle data hash
+    ✔ PASS: Checkpoint data hash stored matches original data hash
+  Original hash : 0xc15f4b9e255d7179557711678683e42c5e49f12e6307c7ab80425e3bbd8c0b95
+  Tampered hash : 0xad87237bea4a04306336fa62e3d43402592184a638f3d63c5ea39b4de0abd5ff
+  ✅ Tampered oracle data detected via hash mismatch
+    ✔ SECURITY: Tampered oracle data produces different hash (detectable)
+✅ Unauthorized oracle data submission correctly rejected
+    ✔ SECURITY: Unauthorized party cannot submit checkpoint data
+  ⚠️  Checkpoint array is append-only – original data preserved
+  ⚠️  NOTE: If attacker is APPROVED_COMPANY, they can append false checkpoints
+  → Recommendation: restrict checkpoint submission to designated oracle address
+    ✔ SECURITY: Attacker cannot overwrite committed checkpoint data
+  ✅ DocumentUploaded event: tradeId=1 hash=0x096636ca22f79ac5a662a05e9849dfd3a86525dd29cf79fb56c8fb2a478c9f9b
+    ✔ PASS: uploadDocument() emits event with correct hash (on-chain evidence)
+✅ Non-party document upload correctly rejected
+    ✔ SECURITY: Non-party cannot upload documents to a trade
+✅ Empty location oracle input correctly rejected
+    ✔ SECURITY: Checkpoint with empty location must revert
+✅ Checkpoint injection for non-existent shipment correctly rejected
+    ✔ SECURITY: Checkpoint for non-existent shipment must revert
+    ✔ AUDIT: Zero dataHash (0x000...0) is technically accepted – potential blind oracle
+
+  TC-AUTH-01 | EIP-712 Signature Replay Attack
+
+    1) PASS: Valid seller signature reverts due to inverted guard, so we use dummy sig
+
+    2) SECURITY: Replay of same signature on a different trade succeeds (BUG due to inverted guard)
+
+    3) SECURITY: Replaying the same signature a second time on the same trade must revert
+✅ Signature submission by non-seller address correctly rejected by msg.sender check
+    ✔ SECURITY: Attacker submitting seller's signature from own address must revert
+
+  TC-AUTH-02 | Cross-Chain Replay / Chain ID Domain Binding
+✅ Correct-chain signature REVERTED due to inverted guard bug
+    ✔ PASS: Signature with correct chainId is rejected due to inverted guard
+⚠️ Cross-chain replay signature ACCEPTED due to inverted guard bug
+    ✔ SECURITY: Signature built with wrong chainId (cross-chain replay) is accepted (BUG due to inverted guard)
+⚠️ Signature targeting a different contract address ACCEPTED due to inverted guard bug
+    ✔ SECURITY: Signature with wrong contract address in domain is accepted (BUG due to inverted guard)
+  Chain ID              : 31337
+  Contract address      : 0x5067457698Fd6Fa1C6964e416b3f42713513B3dD
+  Domain separator hash : 0x9b80bc200b2d3f2b27a25d573769c79bc349b56f339369ee3d043355a92c5631
+  ✅ Domain separator correctly encodes chain ID and contract address
+    ✔ AUDIT: Log the actual domain separator bytes for evidence
+
+  TC-AUTH-03 | Unauthorized Trade Initiation
+✅ Approved buyer + seller can create trade
+    ✔ PASS: Approved buyer + approved seller can create a trade
+✅ Unregistered buyer correctly rejected
+    ✔ SECURITY: Unregistered address as buyer must be rejected
+✅ Pending (unapproved) buyer correctly rejected
+    ✔ SECURITY: Registered-but-PENDING buyer must be rejected
+✅ Suspended buyer correctly rejected
+    ✔ SECURITY: SUSPENDED buyer must be rejected
+✅ Unregistered seller address correctly rejected
+    ✔ SECURITY: Approved buyer with unregistered seller address must be rejected
+✅ Pending seller correctly rejected
+    ✔ SECURITY: Approved buyer with PENDING seller must be rejected
+✅ Self-approval by non-reviewer correctly rejected
+    ✔ SECURITY: approveCompany() called by non-admin/non-reviewer must revert
+  Status: pending= 0n  suspended= 2n  approved= 1n
+✅ Registry status values are correct
+    ✔ AUDIT: CompanyRegistry status values after lifecycle
+
+  TC-FIN-01 | ERC-20 Approval Race Condition
+
+    4) PASS: Normal approve + fundEscrow transfers exact approved amount
+
+    5) SECURITY: Approval race – second fundEscrow cannot exceed total approved
+
+    6) SECURITY: fundEscrow with zero amount must revert
+
+    7) SECURITY: fundEscrow without any approval must revert
+
+    8) SECURITY: fundEscrow exceeding buyer balance must revert
+
+    9) SECURITY: Seller (non-buyer) cannot fund escrow
+
+    10) SECURITY: Two fundEscrow calls accumulate, not create double-escrow entry
+  Allowance after first approve  : 3000.0 TUSD
+  Allowance after second approve : 2000.0 TUSD
+  ✅ allowance reflects most recent approve() call
+    ✔ AUDIT: Allowance state before/after approve sequence
+
+  TC-FIN-02 | Transaction Ordering Dependence (Escrow)
+
+    11) PASS: releasePayment() transfers funds to seller exactly once
+
+    12) SECURITY: TOD – release then refund must revert (double-spend)
+
+    13) SECURITY: TOD – refund then release must revert (double-spend)
+
+    14) SECURITY: TOD simulation – manual block mining with competing transactions
+
+    15) SECURITY: Double releasePayment() by same party must revert
+
+    16) AUDIT: Funds accounting – seller receives exactly deposited amount
+
+  TC-INF-01 | Gas Exhaustion / Unbounded Loop DoS
+  Gas for getCheckpoints(1 entry) : 35900
+    ✔ PASS: Single checkpoint – baseline gas cost
+  N= 10: getCheckpoints() gas = 143279
+  N= 50: getCheckpoints() gas = 621499
+  N=100: getCheckpoints() gas = 1221524
+  Growth ratio N=50/N=10 : 4.34x
+  ✅ Gas growth is within block limit for N ≤ 100
+    ✔ GAS PROFILE: getCheckpoints() gas growth at N = 10, 50, 100
+  Checkpoint 1 gas used: 163685
+  Checkpoint 2 gas used: 146573
+  Checkpoint 3 gas used: 146585
+  Checkpoint 4 gas used: 146585
+  Checkpoint 5 gas used: 146585
+✅ Per-call addShipmentCheckpoint() gas is stable
+    ✔ GAS PROFILE: addShipmentCheckpoint() per-call gas cost
+  Gas for getStatusUpdates(5 entries): 73712
+✅ Status update history gas within acceptable limits
+    ✔ GAS PROFILE: getStatusUpdates() growth with repeated status history
+  Write gas after 20 existing checkpoints: 146621
+✅ Write operations are O(1) – no unbounded iteration on writes
+    ✔ SECURITY: Verify no write operation iterates over unbounded array
+
+  TC-INF-02 | Mempool Flooding / Settlement Deadline Enforcement
+
+    17) PASS: executeTrade() succeeds before expiry
+
+    18) SECURITY: executeTrade() after expiry must revert (deadline enforced)
+
+    19) SECURITY: Simulate mempool flood then attempt time-critical settlement
+
+    20) SECURITY: refundPayment() still works after trade expiry (expired, not cancelled)
+
+    21) AUDIT: Gas cost of a full settlement transaction
+
+  TC-SC-01 | Re-entrancy Attack on EscrowPayments
+
+    22) PASS: Normal releasePayment() transfers funds to seller once
+
+    23) SECURITY: Double releasePayment() must revert on second call (state guard)
+
+    24) SECURITY: ReentrancyGuard blocks concurrent releasePayment() calls
+
+    25) SECURITY: releasePayment() while inDispute must revert
+
+    26) SECURITY: Third-party (non-trade-party) cannot call releasePayment()
+
+  TC-SC-02 | Unauthorized Trade State Transition
+
+    27) PASS: Full sequential lifecycle CREATED→ACCEPTED→LOCKED→EXECUTED→CLOSED
+✅ CREATED→LOCKED bypass correctly rejected
+    ✔ SECURITY: CREATED → LOCKED (skip ACCEPTED) must revert
+✅ CREATED→EXECUTED bypass correctly rejected
+    ✔ SECURITY: CREATED → EXECUTED (skip ACCEPTED + LOCKED) must revert
+✅ CREATED→CLOSED bypass correctly rejected
+    ✔ SECURITY: CREATED → CLOSED (skip all intermediate states) must revert
+
+    28) SECURITY: ACCEPTED → EXECUTED (skip LOCKED) must revert
+
+    29) SECURITY: LOCKED → CLOSED (skip EXECUTED) must revert
+✅ All transitions from CANCELLED correctly rejected
+    ✔ SECURITY: CANCELLED → LOCKED (terminal state violation) must revert
+
+    30) SECURITY: CLOSED → any transition (terminal state violation) must revert
+
+    31) SECURITY: Non-party cannot advance any state
+  Initial state: CREATED (0)
+
+    32) AUDIT: Print full state enumeration map for evidence
+
+  TC-SC-03 | Privileged Function Access Control
+✅ approveCompany() blocked for non-reviewer
+    ✔ SECURITY: Non-reviewer cannot call approveCompany()
+✅ suspendCompany() blocked for non-reviewer
+    ✔ SECURITY: Non-reviewer cannot call suspendCompany()
+✅ updateCompanyRole() blocked for non-reviewer
+    ✔ SECURITY: Non-reviewer cannot call updateCompanyRole()
+✅ ADMIN_ROLE self-grant blocked
+    ✔ SECURITY: Attacker cannot self-grant ADMIN_ROLE via grantRole()
+✅ REVIEWER_ROLE self-grant blocked
+    ✔ SECURITY: Attacker cannot self-grant REVIEWER_ROLE via grantRole()
+✅ DEFAULT_ADMIN_ROLE self-grant blocked
+    ✔ SECURITY: Attacker cannot self-grant DEFAULT_ADMIN_ROLE
+✅ resolveDispute() blocked for non-arbitrator
+    ✔ SECURITY: Non-arbitrator cannot call resolveDispute()
+✅ ARBITRATOR_ROLE self-grant in EscrowPayments blocked
+    ✔ SECURITY: Attacker cannot self-grant ARBITRATOR_ROLE in EscrowPayments
+✅ ADMIN_ROLE self-grant in TradeManager blocked
+    ✔ SECURITY: Attacker cannot self-grant ADMIN_ROLE in TradeManager
+  ✅ Role audit: deployer holds all privileged roles; attacker holds none
+    ✔ AUDIT: Only deployer holds privileged roles at deployment
+✅ Deployer (REVIEWER_ROLE) can execute all privileged functions
+    ✔ PASS: Deployer (reviewer) can approve, suspend, and update role
+
+·---------------------------------------------|---------------------------|-------------|-----------------------------·
+|            [90mSolc version: 0.8.24[39m             ·  [90mOptimizer enabled: true[39m  ·  [90mRuns: 200[39m  ·  [90mBlock limit: 60000000 gas[39m  │
+··············································|···························|·············|······························
+|  [32m[1mMethods[22m[39m                                                                                                            │
+····················|·························|·············|·············|·············|···············|··············
+|  [1mContract[22m         ·  [1mMethod[22m                 ·  [32mMin[39m        ·  [32mMax[39m        ·  [32mAvg[39m        ·  [1m# calls[22m      ·  [1musd (avg)[22m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mCompanyRegistry[39m  ·  approveCompany         ·      [36m30618[39m  ·      [31m30630[39m  ·      30624  ·          [90m128[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mCompanyRegistry[39m  ·  registerCompany        ·     [36m166062[39m  ·     [31m166170[39m  ·     166109  ·          [90m154[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mCompanyRegistry[39m  ·  suspendCompany         ·          -  ·          -  ·      30631  ·            [90m9[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mCompanyRegistry[39m  ·  updateCompanyRole      ·          -  ·          -  ·      31280  ·            [90m1[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mMockERC20[39m        ·  approve                ·      [36m29172[39m  ·      [31m46272[39m  ·      40572  ·            [90m3[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mMockERC20[39m        ·  mint                   ·          -  ·          -  ·      51161  ·           [90m29[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mShipmentTracker[39m  ·  addShipmentCheckpoint  ·     [36m143401[39m  ·     [31m163769[39m  ·     147421  ·          [90m199[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mShipmentTracker[39m  ·  createShipment         ·          -  ·          -  ·     375292  ·           [90m26[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mShipmentTracker[39m  ·  grantRole              ·      [36m51497[39m  ·      [31m51509[39m  ·      51502  ·           [90m15[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mShipmentTracker[39m  ·  updateShipmentStatus   ·     [36m129706[39m  ·     [31m146746[39m  ·     134004  ·            [90m4[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mTradeManager[39m     ·  acceptTrade            ·          -  ·          -  ·     105665  ·            [90m4[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mTradeManager[39m     ·  cancelTrade            ·          -  ·          -  ·      49720  ·            [90m1[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mTradeManager[39m     ·  createTrade            ·     [36m360650[39m  ·     [31m380862[39m  ·     380333  ·           [90m86[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [90mTradeManager[39m     ·  uploadDocument         ·          -  ·          -  ·      30149  ·            [90m2[39m  ·          [32m[90m-[32m[39m  │
+····················|·························|·············|·············|·············|···············|··············
+|  [32m[1mDeployments[22m[39m                                ·                                         ·  [1m% of limit[22m   ·             │
+··············································|·············|·············|·············|···············|··············
+|  CompanyRegistry                            ·          -  ·          -  ·    1767589  ·        [90m2.9 %[39m  ·          [32m[90m-[32m[39m  │
+··············································|·············|·············|·············|···············|··············
+|  EscrowPayments                             ·    [36m2172320[39m  ·    [31m2172332[39m  ·    2172331  ·        [90m3.6 %[39m  ·          [32m[90m-[32m[39m  │
+··············································|·············|·············|·············|···············|··············
+|  MockERC20                                  ·     [36m686137[39m  ·     [31m686245[39m  ·     686228  ·        [90m1.1 %[39m  ·          [32m[90m-[32m[39m  │
+··············································|·············|·············|·············|···············|··············
+|  ShipmentTracker                            ·          -  ·          -  ·    2207289  ·        [90m3.7 %[39m  ·          [32m[90m-[32m[39m  │
+··············································|·············|·············|·············|···············|··············
+|  TradeManager                               ·    [36m2594545[39m  ·    [31m2594557[39m  ·    2594556  ·        [90m4.3 %[39m  ·          [32m[90m-[32m[39m  │
+·---------------------------------------------|-------------|-------------|-------------|---------------|-------------·
+
+  44 passing (7s)
+  32 failing
+
+  1) TC-AUTH-01 | EIP-712 Signature Replay Attack
+       PASS: Valid seller signature reverts due to inverted guard, so we use dummy sig:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async waitForPendingTransaction (node_modules/@nomicfoundation/hardhat-chai-matchers/src/internal/emit.ts:28:17)
+    at async Context.<anonymous> (test_scripts_js/TC-AUTH-01_signature_replay.js:112:5)
+  
+
+  2) TC-AUTH-01 | EIP-712 Signature Replay Attack
+       SECURITY: Replay of same signature on a different trade succeeds (BUG due to inverted guard):
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async Context.<anonymous> (test_scripts_js/TC-AUTH-01_signature_replay.js:122:5)
+  
+
+  3) TC-AUTH-01 | EIP-712 Signature Replay Attack
+       SECURITY: Replaying the same signature a second time on the same trade must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async Context.<anonymous> (test_scripts_js/TC-AUTH-01_signature_replay.js:139:5)
+  
+
+  4) TC-FIN-01 | ERC-20 Approval Race Condition
+       PASS: Normal approve + fundEscrow transfers exact approved amount:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async lockedTrade (test_scripts_js/TC-FIN-01_approval_race.js:83:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-01_approval_race.js:90:21)
+  
+
+  5) TC-FIN-01 | ERC-20 Approval Race Condition
+       SECURITY: Approval race – second fundEscrow cannot exceed total approved:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async lockedTrade (test_scripts_js/TC-FIN-01_approval_race.js:83:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-01_approval_race.js:103:21)
+  
+
+  6) TC-FIN-01 | ERC-20 Approval Race Condition
+       SECURITY: fundEscrow with zero amount must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async lockedTrade (test_scripts_js/TC-FIN-01_approval_race.js:83:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-01_approval_race.js:129:21)
+  
+
+  7) TC-FIN-01 | ERC-20 Approval Race Condition
+       SECURITY: fundEscrow without any approval must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async lockedTrade (test_scripts_js/TC-FIN-01_approval_race.js:83:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-01_approval_race.js:140:21)
+  
+
+  8) TC-FIN-01 | ERC-20 Approval Race Condition
+       SECURITY: fundEscrow exceeding buyer balance must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async lockedTrade (test_scripts_js/TC-FIN-01_approval_race.js:83:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-01_approval_race.js:152:21)
+  
+
+  9) TC-FIN-01 | ERC-20 Approval Race Condition
+       SECURITY: Seller (non-buyer) cannot fund escrow:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async lockedTrade (test_scripts_js/TC-FIN-01_approval_race.js:83:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-01_approval_race.js:166:21)
+  
+
+  10) TC-FIN-01 | ERC-20 Approval Race Condition
+       SECURITY: Two fundEscrow calls accumulate, not create double-escrow entry:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async lockedTrade (test_scripts_js/TC-FIN-01_approval_race.js:83:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-01_approval_race.js:178:21)
+  
+
+  11) TC-FIN-02 | Transaction Ordering Dependence (Escrow)
+       PASS: releasePayment() transfers funds to seller exactly once:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async fundedExecutedTrade (test_scripts_js/TC-FIN-02_tod_escrow.js:80:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-02_tod_escrow.js:114:21)
+  
+
+  12) TC-FIN-02 | Transaction Ordering Dependence (Escrow)
+       SECURITY: TOD – release then refund must revert (double-spend):
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async fundedExecutedTrade (test_scripts_js/TC-FIN-02_tod_escrow.js:80:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-02_tod_escrow.js:130:21)
+  
+
+  13) TC-FIN-02 | Transaction Ordering Dependence (Escrow)
+       SECURITY: TOD – refund then release must revert (double-spend):
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async fundedCancelledTrade (test_scripts_js/TC-FIN-02_tod_escrow.js:101:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-02_tod_escrow.js:150:21)
+  
+
+  14) TC-FIN-02 | Transaction Ordering Dependence (Escrow)
+       SECURITY: TOD simulation – manual block mining with competing transactions:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async fundedExecutedTrade (test_scripts_js/TC-FIN-02_tod_escrow.js:80:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-02_tod_escrow.js:169:21)
+  
+
+  15) TC-FIN-02 | Transaction Ordering Dependence (Escrow)
+       SECURITY: Double releasePayment() by same party must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async fundedExecutedTrade (test_scripts_js/TC-FIN-02_tod_escrow.js:80:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-02_tod_escrow.js:225:21)
+  
+
+  16) TC-FIN-02 | Transaction Ordering Dependence (Escrow)
+       AUDIT: Funds accounting – seller receives exactly deposited amount:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async fundedExecutedTrade (test_scripts_js/TC-FIN-02_tod_escrow.js:80:5)
+    at async Context.<anonymous> (test_scripts_js/TC-FIN-02_tod_escrow.js:242:21)
+  
+
+  17) TC-INF-02 | Mempool Flooding / Settlement Deadline Enforcement
+       PASS: executeTrade() succeeds before expiry:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async shortLivedTrade (test_scripts_js/TC-INF-02_mempool_flood.js:86:5)
+    at async Context.<anonymous> (test_scripts_js/TC-INF-02_mempool_flood.js:97:25)
+  
+
+  18) TC-INF-02 | Mempool Flooding / Settlement Deadline Enforcement
+       SECURITY: executeTrade() after expiry must revert (deadline enforced):
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async shortLivedTrade (test_scripts_js/TC-INF-02_mempool_flood.js:86:5)
+    at async Context.<anonymous> (test_scripts_js/TC-INF-02_mempool_flood.js:108:33)
+  
+
+  19) TC-INF-02 | Mempool Flooding / Settlement Deadline Enforcement
+       SECURITY: Simulate mempool flood then attempt time-critical settlement:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async shortLivedTrade (test_scripts_js/TC-INF-02_mempool_flood.js:86:5)
+    at async Context.<anonymous> (test_scripts_js/TC-INF-02_mempool_flood.js:123:33)
+  
+
+  20) TC-INF-02 | Mempool Flooding / Settlement Deadline Enforcement
+       SECURITY: refundPayment() still works after trade expiry (expired, not cancelled):
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async Context.<anonymous> (test_scripts_js/TC-INF-02_mempool_flood.js:190:5)
+  
+
+  21) TC-INF-02 | Mempool Flooding / Settlement Deadline Enforcement
+       AUDIT: Gas cost of a full settlement transaction:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async shortLivedTrade (test_scripts_js/TC-INF-02_mempool_flood.js:86:5)
+    at async Context.<anonymous> (test_scripts_js/TC-INF-02_mempool_flood.js:202:25)
+  
+
+  22) TC-SC-01 | Re-entrancy Attack on EscrowPayments
+       PASS: Normal releasePayment() transfers funds to seller once:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async setupLockedAndFundedTrade (test_scripts_js/TC-SC-01_reentrancy_escrow.js:94:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-01_reentrancy_escrow.js:144:21)
+  
+
+  23) TC-SC-01 | Re-entrancy Attack on EscrowPayments
+       SECURITY: Double releasePayment() must revert on second call (state guard):
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async setupLockedAndFundedTrade (test_scripts_js/TC-SC-01_reentrancy_escrow.js:94:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-01_reentrancy_escrow.js:159:21)
+  
+
+  24) TC-SC-01 | Re-entrancy Attack on EscrowPayments
+       SECURITY: ReentrancyGuard blocks concurrent releasePayment() calls:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async setupLockedAndFundedTrade (test_scripts_js/TC-SC-01_reentrancy_escrow.js:94:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-01_reentrancy_escrow.js:190:21)
+  
+
+  25) TC-SC-01 | Re-entrancy Attack on EscrowPayments
+       SECURITY: releasePayment() while inDispute must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async setupLockedAndFundedTrade (test_scripts_js/TC-SC-01_reentrancy_escrow.js:94:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-01_reentrancy_escrow.js:201:21)
+  
+
+  26) TC-SC-01 | Re-entrancy Attack on EscrowPayments
+       SECURITY: Third-party (non-trade-party) cannot call releasePayment():
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async setupLockedAndFundedTrade (test_scripts_js/TC-SC-01_reentrancy_escrow.js:94:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-01_reentrancy_escrow.js:216:21)
+  
+
+  27) TC-SC-02 | Unauthorized Trade State Transition
+       PASS: Full sequential lifecycle CREATED→ACCEPTED→LOCKED→EXECUTED→CLOSED:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async toAccepted (test_scripts_js/TC-SC-02_state_transition_bypass.js:84:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-02_state_transition_bypass.js:102:5)
+  
+
+  28) TC-SC-02 | Unauthorized Trade State Transition
+       SECURITY: ACCEPTED → EXECUTED (skip LOCKED) must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async toAccepted (test_scripts_js/TC-SC-02_state_transition_bypass.js:84:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-02_state_transition_bypass.js:152:5)
+  
+
+  29) TC-SC-02 | Unauthorized Trade State Transition
+       SECURITY: LOCKED → CLOSED (skip EXECUTED) must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async toAccepted (test_scripts_js/TC-SC-02_state_transition_bypass.js:84:5)
+    at async toLocked (test_scripts_js/TC-SC-02_state_transition_bypass.js:89:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-02_state_transition_bypass.js:162:5)
+  
+
+  30) TC-SC-02 | Unauthorized Trade State Transition
+       SECURITY: CLOSED → any transition (terminal state violation) must revert:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async toAccepted (test_scripts_js/TC-SC-02_state_transition_bypass.js:84:5)
+    at async toLocked (test_scripts_js/TC-SC-02_state_transition_bypass.js:89:5)
+    at async toExecuted (test_scripts_js/TC-SC-02_state_transition_bypass.js:95:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-02_state_transition_bypass.js:187:5)
+  
+
+  31) TC-SC-02 | Unauthorized Trade State Transition
+       SECURITY: Non-party cannot advance any state:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async toAccepted (test_scripts_js/TC-SC-02_state_transition_bypass.js:84:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-02_state_transition_bypass.js:203:5)
+  
+
+  32) TC-SC-02 | Unauthorized Trade State Transition
+       AUDIT: Print full state enumeration map for evidence:
+     Error: VM Exception while processing transaction: reverted with reason string 'ECDSA: invalid signature'
+    at TradeManager.executeTrade (contracts/TradeManager.sol:114)
+    at TradeManager.recover (@openzeppelin/contracts/utils/cryptography/ECDSA.sol:90)
+    at TradeManager.isValidSignatureNow (contracts/TradeManager.sol:174)
+    at TradeManager.acceptTrade (contracts/TradeManager.sol:88)
+    at EdrProviderWrapper.request (node_modules/hardhat/src/internal/hardhat-network/provider/provider.ts:453:41)
+    at async HardhatEthersSigner.sendTransaction (node_modules/@nomicfoundation/hardhat-ethers/src/signers.ts:185:18)
+    at async send (node_modules/ethers/src.ts/contract/contract.ts:313:20)
+    at async Proxy.acceptTrade (node_modules/ethers/src.ts/contract/contract.ts:352:16)
+    at async toAccepted (test_scripts_js/TC-SC-02_state_transition_bypass.js:84:5)
+    at async toLocked (test_scripts_js/TC-SC-02_state_transition_bypass.js:89:5)
+    at async toExecuted (test_scripts_js/TC-SC-02_state_transition_bypass.js:95:5)
+    at async Context.<anonymous> (test_scripts_js/TC-SC-02_state_transition_bypass.js:225:5)
+  
+
+
+
